@@ -1,12 +1,28 @@
 # Adventures in k3s
 As of Dec 5 2022, Versions of:
-1. Ubuntu server 22.04.1(minimal install) 
-2. Longhorn (latest version)
-3. k3s v1.24.8 (Longhorn is incompatible with anything over 1.24)
-4. Cert-manager 1.10.1 (says it is compatible with kuberentes 1.24)
-5. Metallb (latest)
 
-Please note that incompatibilities may arise with different versions of the installed software.
+SW  Used |     version     | Notes   
+---------|----------|---------
+Ubuntu server | 22.04.1 | minimal install
+Longhorn | latest version | 
+k3s  | v1.24.8 | Longhorn is incompatible with anything over 1.24
+Cert-manager  | 1.10.1  | says it is compatible with kuberentes 1.24)
+Metallb | latest | 
+
+---
+
+# Change Control
+Please wait for the code to be tested before using
+Date | Changes | Tested
+---------|----------|---------
+ DEC/18/2022 | Initial deploy | YES
+ DEC/18/2022 | V1.0 Install script | NO
+ 
+> **_WARNING: Always examine scripts downloaded from the internet before running them locally!!_** > 
+
+---
+---
+
 
 ## Kubernetes install using K3s in a 3 node cluster
 I decided to write this after going through the process of installing a non-standard k3s cluster for my home lab.
