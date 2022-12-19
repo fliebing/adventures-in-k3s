@@ -23,6 +23,11 @@ Date | Changes | Tested
 ---
 ---
 
+## Why K3s?
+This is due to the minimal overhead this kubernetes distro has, I also wanted to make sure to keep my options open in regards to the orchestrator I would use. Rancher is interesting, but it is a bit heavy for my very light 3 node cluster at this time.(I need the resources to run the rest of my tests), so fo rthe time being I will use command line and possibly Portainer so that I can manage my Kubernetes as well as my docker from the same place.
+Longhorn is possibly the one that sold me on K3s, as it is done by the same team, I wanted to ensure minimal incompatibilities with such an important piece as my block storage. It is easy to deploy and has a simple, clean and straight-forward UI.
+Longhorn has some downfalls though.. It is only block storage. So file and object storage would need to be handled in some other way. My preferred solution in my Proxmox setup is using Ceph (old, yes, but incredibly reliable). Its a great solution, but it requires I devote entire disks to this, which at this time I cannot do for this build as I am using 3 bare metal tiny PC's.
+As for reliability I am using old Lenovo Thinkcentre units I picked up some years ago in a going out of business sale, although now you should be able to find them cheap, since the older models are out of support and cannot run Windows 11, so supply of these should be there and we do our bit to reduce e-waste. Their Processor and memory allows for them to be incredibly capable worker nodes (although they have NO upgradeability in regards to disk, you are stuck using the highest size SSD you can get them to recognize). 
 
 ## Kubernetes install using K3s in a 3 node cluster
 I decided to write this after going through the process of installing a non-standard k3s cluster for my home lab.
@@ -56,27 +61,34 @@ Total Number of nodes | Failed Node Tolerance
 At 6 I would make 3 master and 3 worker to ensure that I wouldnt accidentally do something that could bring down the cluster by playing around with the different configs and installing more apps.
 
 ## Traefik
-I have not had a problem with the way Traefik is deployed in the K3s suite, but I do not like that changes need to be done in a different location as the K3s system overwrites the configs of the pre installed packages. So I will need to install this component separately, if you don’t have a problem with using the default, read the notes under the Install First Server, it will tel you what option to omit.
+I have not had a problem with the way Traefik is deployed in the K3s suite, but I do not like that the K3s system overwrites the configs of the pre installed packages, but it is either re-installing this component completely or making a copy of the yaml file and using a different name so k3s does not overwrite it.
 
 ​# Installation of K3S HA cluster
 
 ## Pre requisites
 This is what you don’t figure out until the 3rd or 4th time you run the setup….
-1. You ALWAYS need to place a secret passphrase for the cluster install
+1. make sure your hostnames are just alphanumeric, or else there may be some issues with kubernetes, I had some strangeness until I went with simple alphanumeric names, no special characters like hyphens or underscores
+2. You ALWAYS need to place a secret passphrase for the cluster install
     1. The instructions don’t tell you this first hand, as they even allow you to get the secret from the first node if you forgot… but the first node generates a K10 token that will not work for the secondary node installs. 
-2. Decide if you are going to use a load balancer in the K3s environment or outside. If you will use an external load balancer (my case) then go to item 3, if not, then go to 4
-3. Prepare the load balancer beforehand so you have an IP set aside.
-    1. This is important if you are not planning on using Metallb to load balance.
-  4. Decide if you will want Longhorn for distributed file system support, (because the current version of Longhorn v1.3.2 does not support k8s v1.25. The support will start from v1.4.0) so you will need to install a different version of K3s if you want Longhorn.
+3. Prepare your network, have the kuberentes IP set aside.
+    1. This is important since you will want the IP be the one you cluster responds to from your local network.
+4. Decide if you will want Longhorn for distributed file system support, (because the current version of Longhorn v1.3.2 does not support kuberentes versions higher than v1.24. The support will start from v1.4.0 of Longhorn) so you will need to install an older version of K3s if you want Longhorn, in my case I will push the envelope and go with 1.24.8.
 
 
 ## Install the following :
-(preparing for Longhorn and wireguard, and I like nano to edit the files, also preemptively installing Helm)
+Start off by disabling the swap in ubuntu, especially important for these low capacity systems as Kubernetes is not designed to work with swap files
+Also preparing for Longhorn and wireguard, and since I like nano to edit the files, it is being installed, and preemptively installing Helm.
 
 ```bash
 sudo apt update && \
 sudo apt upgrade -y && \
-sudo apt install open-iscsi jq nfs-common tgt -y && \
+sudo swapoff -a -v &&\
+sudo rm /swap.img &&\
+#back up /etc/fstab: &&\
+sudo cp /etc/fstab /etc/fstab.bak &&\
+sudo sed -i '/\/swapfile/d' /etc/fstab &&\
+sudo sed -i '/\/swap.img/d' /etc/fstab &&\
+sudo apt install dialog open-iscsi jq nfs-common tgt -y && \
 sudo apt install wireguard nano -y && \
 curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null && \
 sudo apt install apt-transport-https -y && \
@@ -91,6 +103,8 @@ sudo apt install helm -y
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.24.8+k3s1 \
 sh -s - server \
 --write-kubeconfig-mode 644 \
+--disable servicelb \
+--disable local-storage \
 --token=YOUR-SECRET \
 --tls-san CLUSTER-DNS-NAME --tls-san CLUSTER-LOAD BALNCER-IP \
 --cluster-init
