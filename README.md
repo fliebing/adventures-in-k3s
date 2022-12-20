@@ -289,13 +289,14 @@ sudo systemctl status iscsid
 
 And you should see it be up.. 
 An additional item is that my system started crying about multipath being enabled. So preemptively I ran the following in each node:
+```bash
 sudo cat << EOF >> /etc/multipath.conf 
 blacklist {
   devnode "^sd[a-z0-9]+"
 }
 EOF &&\
 systemctl restart multipathd
-
+```
 One final check with the script…. And you should be good to go.
 
 
